@@ -1,3 +1,10 @@
+# Maven
+src/java/target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
 # Python
 src/py/__pycache__/
 src/py/*.py[cod]
