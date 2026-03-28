@@ -1,0 +1,30 @@
+# Python
+src/py/__pycache__/
+src/py/*.py[cod]
+src/py*$py.class
+src/py/*.so
+src/py/.Python
+src/py/venv/
+src/py/env/
+src/py/.env
+
+# IDE
+.idea/
+.vscode/
+src/py/*.iml
+
+# Face images (sensitive data)
+src/py/data/
+src/py/*.jpg
+src/py/*.jpeg
+src/py/*.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Dependencies
+node_modules/
