@@ -1,0 +1,104 @@
+package com.lab.face.service;
+
+import com.lab.face.entity.Student;
+import com.lab.face.thrift.FaceInfo;
+import com.lab.face.thrift.EncodeRequest;
+import com.lab.face.thrift.EncodeResponse;
+import com.lab.face.thrift.FaceRecognitionClient;
+import com.lab.face.mapper.StudentMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.apache.thrift.TException;
+import java.util.Base64;
+import java.util.List;
+
+@Service
+public class StudentService {
+
+    @Autowired
+    private StudentMapper studentMapper;
+
+    @Autowired
+    private FaceRecognitionClient faceRecognitionClient;
+
+    private final ObjectMapper objectMapper;
+
+    public StudentService() {
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+    }
+
+    public void register(Student student) {
+        String imageBase64 = student.getImageBase64();
+        if (imageBase64 == null || imageBase64.isEmpty()) {
+            throw new RuntimeException("图片不能为空");
+        }
+
+        byte[] imageBytes = Base64.getDecoder().decode(imageBase64);
+
+        EncodeRequest request = new EncodeRequest();
+        request.setImage_data(imageBytes);
+
+        EncodeResponse response;
+        try {
+            response = faceRecognitionClient.encode(request);
+        } catch (TException e) {
+            throw new RuntimeException("调用Python服务失败: " + e.getMessage());
+        }
+
+        if (response.getFaces() == null || response.getFaces().isEmpty()) {
+            throw new RuntimeException("未检测到人脸");
+        }
+
+        FaceInfo face = response.getFaces().get(0);
+
+        String encodingJson;
+        try {
+            encodingJson = objectMapper.writeValueAsString(face);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("序列化人脸信息失败: " + e.getMessage());
+        }
+
+        student.setEncoding(encodingJson);
+        student.setStatus(1);
+        student.setHasFace(1);
+        student.setImageBase64(null);
+
+        studentMapper.insert(student);
+    }
+
+    public List<Student> getAllStudents() {
+        return studentMapper.findAll();
+    }
+
+    public Student getStudentById(Long id) {
+        Student student = studentMapper.findById(id);
+        if (student == null) {
+            throw new RuntimeException("学生不存在");
+        }
+        return student;
+    }
+
+    public void updateStudent(Student student) {
+        if (student.getId() == null) {
+            throw new RuntimeException("ID不能为空");
+        }
+        Student existing = studentMapper.findById(student.getId());
+        if (existing == null) {
+            throw new RuntimeException("学生不存在");
+        }
+        studentMapper.update(student);
+    }
+
+    public void deleteStudent(Long id) {
+        Student student = studentMapper.findById(id);
+        if (student == null) {
+            throw new RuntimeException("学生不存在");
+        }
+        studentMapper.deleteById(id);
+    }
+}
