@@ -34,7 +34,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showDialog" :title="isEdit ? '编辑学生' : '注册学生'" width="500px" destroy-on-close>
+    <el-dialog v-model="showDialog" :title="isEdit ? '编辑学生' : '注册学生'" width="600px" destroy-on-close>
       <el-form :model="form" label-width="80px" :rules="rules" ref="formRef">
         <el-form-item label="学号" prop="studentNo">
           <el-input v-model="form.studentNo" :disabled="isEdit" />
@@ -52,18 +52,42 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="isEdit ? '新人脸' : '照片'" prop="imageBase64">
-          <el-upload
-            :auto-upload="false"
-            :show-file-list="false"
-            :on-change="handleImageChange"
-          >
-            <el-button>{{ isEdit ? '重新上传' : '选择图片' }}</el-button>
-            <span v-if="form.imageBase64" style="margin-left: 10px; color: #67c23a">已选择</span>
-          </el-upload>
+          <div class="image-input-area">
+            <div class="mode-switch">
+              <el-radio-group v-model="imageMode">
+                <el-radio-button label="upload">上传图片</el-radio-button>
+                <el-radio-button label="camera">摄像头拍摄</el-radio-button>
+              </el-radio-group>
+            </div>
+
+            <div v-if="imageMode === 'upload'" class="upload-area">
+              <el-upload
+                :auto-upload="false"
+                :show-file-list="false"
+                :on-change="handleImageChange"
+              >
+                <el-button>选择图片</el-button>
+                <span v-if="form.imageBase64" style="margin-left: 10px; color: #67c23a">已选择</span>
+              </el-upload>
+            </div>
+
+            <div v-else class="camera-area">
+              <div class="camera-wrapper">
+                <video ref="registerVideoRef" autoplay playsinline></video>
+                <canvas ref="registerCanvasRef" class="hidden-canvas"></canvas>
+              </div>
+              <div class="camera-controls">
+                <el-button v-if="!cameraActive" type="primary" @click="startCamera">打开摄像头</el-button>
+                <el-button v-else type="success" @click="capturePhoto">拍照</el-button>
+                <el-button v-if="cameraActive" @click="stopCamera">关闭</el-button>
+                <span v-if="form.imageBase64 && imageMode === 'camera'" style="margin-left: 10px; color: #67c23a">已拍摄</span>
+              </div>
+            </div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showDialog = false">取消</el-button>
+        <el-button @click="handleDialogClose">取消</el-button>
         <el-button type="primary" @click="handleSubmit" :loading="loading">{{ isEdit ? '更新' : '注册' }}</el-button>
       </template>
     </el-dialog>
@@ -71,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStudentList, registerStudent, updateStudent, deleteStudent } from '@/api/student'
 
@@ -80,6 +104,12 @@ const showDialog = ref(false)
 const isEdit = ref(false)
 const loading = ref(false)
 const formRef = ref()
+const imageMode = ref('upload')
+
+const registerVideoRef = ref(null)
+const registerCanvasRef = ref(null)
+
+let cameraStream = null
 
 const form = reactive({
   id: null,
@@ -107,12 +137,16 @@ async function fetchStudents() {
 
 function openAddDialog() {
   isEdit.value = false
+  imageMode.value = 'upload'
+  stopCamera()
   Object.assign(form, { id: null, studentNo: '', name: '', password: '', status: 1, imageBase64: '' })
   showDialog.value = true
 }
 
 function openEditDialog(row) {
   isEdit.value = true
+  imageMode.value = 'upload'
+  stopCamera()
   Object.assign(form, { id: row.id, studentNo: row.studentNo, name: row.name, password: row.password, status: row.status, imageBase64: '' })
   showDialog.value = true
 }
@@ -126,13 +160,49 @@ function handleImageChange(file) {
   reader.readAsDataURL(file.raw)
 }
 
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true })
+    registerVideoRef.value.srcObject = cameraStream
+    cameraActive.value = true
+  } catch (err) {
+    ElMessage.error('摄像头打开失败')
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop())
+    cameraStream = null
+  }
+  cameraActive.value = false
+}
+
+function capturePhoto() {
+  const video = registerVideoRef.value
+  const canvas = registerCanvasRef.value
+  const ctx = canvas.getContext('2d')
+
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  ctx.drawImage(video, 0, 0)
+
+  form.imageBase64 = canvas.toDataURL('image/jpeg').split(',')[1]
+  ElMessage.success('拍照成功')
+}
+
+function handleDialogClose() {
+  stopCamera()
+  showDialog.value = false
+}
+
 async function handleSubmit() {
   if (!formRef.value) return
   await formRef.value.validate(async (valid) => {
     if (!valid) return
 
     if (!isEdit.value && !form.imageBase64) {
-      ElMessage.warning('请选择图片')
+      ElMessage.warning('请选择或拍摄图片')
       return
     }
 
@@ -150,7 +220,7 @@ async function handleSubmit() {
         await registerStudent(form)
         ElMessage.success('注册成功')
       }
-      showDialog.value = false
+      handleDialogClose()
       fetchStudents()
     } catch (e) {
       ElMessage.error(e.message || '操作失败')
@@ -176,16 +246,64 @@ async function handleDelete(id) {
 onMounted(() => {
   fetchStudents()
 })
+
+onUnmounted(() => {
+  stopCamera()
+})
+
+const cameraActive = ref(false)
 </script>
 
 <style scoped>
 .student-view {
-  padding: 20px;
+  padding: 24px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.image-input-area {
+  width: 100%;
+}
+
+.mode-switch {
+  margin-bottom: 15px;
+}
+
+.upload-area {
+  display: flex;
+  align-items: center;
+}
+
+.camera-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.camera-wrapper {
+  width: 320px;
+  height: 240px;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.camera-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hidden-canvas {
+  display: none;
+}
+
+.camera-controls {
+  display: flex;
   align-items: center;
 }
 </style>

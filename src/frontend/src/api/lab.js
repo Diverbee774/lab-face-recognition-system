@@ -29,3 +29,31 @@ export function deleteLab(id) {
         method: 'delete'
     })
 }
+
+export function getLabStudents(labId) {
+    return request({
+        url: `/lab/${labId}/students`,
+        method: 'get'
+    })
+}
+
+export function addStudentToLab(labId, studentId) {
+    return request({
+        url: `/lab/${labId}/students/${studentId}`,
+        method: 'post'
+    })
+}
+
+export function removeStudentFromLab(labId, studentId) {
+    return request({
+        url: `/lab/${labId}/students/${studentId}`,
+        method: 'delete'
+    })
+}
+
+export function getAllStudents() {
+    return request({
+        url: '/lab/students',
+        method: 'get'
+    })
+}
