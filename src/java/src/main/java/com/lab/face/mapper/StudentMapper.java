@@ -17,12 +17,12 @@ public interface StudentMapper {
     @Select("SELECT * FROM student")
     List<Student> findAll();
 
-    @Insert("INSERT INTO student (student_no, name, password, encoding, image_url, status, has_face) " +
-            "VALUES (#{studentNo}, #{name}, #{password}, #{encoding}, #{imageUrl}, #{status}, #{hasFace})")
+    @Insert("INSERT INTO student (student_no, name, encoding, image_url, status, has_face) " +
+            "VALUES (#{studentNo}, #{name}, #{encoding}, #{imageUrl}, #{status}, #{hasFace})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Student student);
 
-    @Update("UPDATE student SET name=#{name}, password=#{password}, encoding=#{encoding}, " +
+    @Update("UPDATE student SET name=#{name}, encoding=#{encoding}, " +
             "image_url=#{imageUrl}, status=#{status}, has_face=#{hasFace} WHERE id=#{id}")
     void update(Student student);
 

@@ -1,13 +1,11 @@
 <template>
   <div class="lab-view">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>实验室管理</span>
-          <el-button type="primary" @click="openAddDialog">添加实验室</el-button>
-        </div>
-      </template>
+    <div class="page-header">
+      <h2>实验室管理</h2>
+      <el-button type="primary" @click="openAddDialog">添加实验室</el-button>
+    </div>
 
+    <el-card class="table-card">
       <el-table :data="labs" border stripe>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="名称" />
@@ -53,9 +51,9 @@
     </el-dialog>
 
     <el-dialog v-model="showWhiteDialog" :title="`白名单管理 - ${currentLab?.name}`" width="700px" destroy-on-close>
-      <div style="display: flex; gap: 20px;">
-        <div style="flex: 1;">
-          <h4 style="margin: 0 0 10px 0;">白名单学生</h4>
+      <div class="white-dialog-content">
+        <div class="white-list">
+          <h4>白名单学生</h4>
           <el-table :data="whiteStudents" border stripe max-height="300" size="small">
             <el-table-column prop="studentNo" label="学号" />
             <el-table-column prop="name" label="姓名" />
@@ -66,8 +64,8 @@
             </el-table-column>
           </el-table>
         </div>
-        <div style="width: 220px; border-left: 1px solid #eee; padding-left: 20px;">
-          <h4 style="margin: 0 0 10px 0;">添加学生</h4>
+        <div class="add-student">
+          <h4>添加学生</h4>
           <el-select v-model="selectedStudentId" placeholder="选择学生" filterable style="width: 100%; margin-bottom: 10px">
             <el-option
               v-for="s in allStudents"
@@ -137,14 +135,11 @@ async function openWhiteDialog(row) {
   selectedStudentId.value = null
   try {
     const [wlRes, allRes] = await Promise.all([getLabStudents(row.id), getAllStudents()])
-    console.log('白名单学生:', wlRes)
-    console.log('所有学生:', allRes)
     whiteStudents.value = wlRes.data || []
     const whiteIds = new Set(whiteStudents.value.map(s => s.id))
     allStudents.value = (allRes.data || []).filter(s => !whiteIds.has(s.id))
     showWhiteDialog.value = true
   } catch (e) {
-    console.error('获取白名单失败:', e)
     ElMessage.error('获取白名单失败')
   }
 }
@@ -222,9 +217,47 @@ onMounted(() => {
   padding: 24px;
 }
 
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.table-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+.white-dialog-content {
+  display: flex;
+  gap: 20px;
+}
+
+.white-list {
+  flex: 1;
+}
+
+.white-list h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.add-student {
+  width: 220px;
+  border-left: 1px solid #eee;
+  padding-left: 20px;
+}
+
+.add-student h4 {
+  margin: 0 0 10px 0;
+  color: #333;
 }
 </style>

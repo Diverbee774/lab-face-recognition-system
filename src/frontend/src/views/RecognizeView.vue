@@ -1,64 +1,73 @@
 <template>
   <div class="recognize-view">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>人脸识别通行</span>
-          <el-select v-model="selectedLabId" placeholder="选择实验室" style="width: 200px">
-            <el-option
-              v-for="lab in labs"
-              :key="lab.id"
-              :label="lab.name"
-              :value="lab.id"
-            />
-          </el-select>
-        </div>
-      </template>
+    <div class="page-header">
+      <h2>人脸识别通行</h2>
+      <el-select v-model="selectedLabId" placeholder="选择实验室" style="width: 200px">
+        <el-option
+          v-for="lab in labs"
+          :key="lab.id"
+          :label="lab.name"
+          :value="lab.id"
+        />
+      </el-select>
+    </div>
 
-      <div class="camera-container">
+    <div class="content">
+      <el-card class="camera-card">
         <div class="video-wrapper">
           <canvas ref="canvasRef"></canvas>
+          <div v-if="!selectedLabId" class="no-lab">
+            <p>请先选择实验室</p>
+          </div>
+        </div>
+      </el-card>
+
+      <el-card class="result-card">
+        <template #header>
+          <span>识别结果</span>
+        </template>
+        <div v-if="!hasFace" class="no-result">
+          <el-icon :size="60" color="#ccc"><User /></el-icon>
+          <p>等待识别...</p>
+        </div>
+        <div v-else-if="matched" class="matched">
+          <el-avatar :size="80" :src="'data:image/jpeg;base64,' + matched.imageBase64">
+            {{ matched.name }}
+          </el-avatar>
+          <div class="info">
+            <p class="name">{{ matched.name }}</p>
+            <p class="student-no">{{ matched.studentNo }}</p>
+            <el-tag :type="matched.hasAccess ? 'success' : 'danger'" size="large">
+              {{ matched.hasAccess ? '允许通行' : '无权限' }}
+            </el-tag>
+          </div>
+        </div>
+        <div v-else class="no-result">
+          <el-icon :size="60" color="#e6a23c"><Warning /></el-icon>
+          <p>未识别到白名单人员</p>
         </div>
 
-        <div class="result-panel">
-          <h3>识别结果</h3>
-          <div v-if="!matched" class="no-result">
-            <el-icon :size="60"><User /></el-icon>
-            <p>{{ hasFace ? '等待匹配...' : '等待识别...' }}</p>
-          </div>
-          <div v-else class="matched">
-            <el-avatar :size="80" :src="'data:image/jpeg;base64,' + matched.imageBase64">
-              {{ matched.name }}
-            </el-avatar>
-            <div class="info">
-              <p class="name">{{ matched.name }}</p>
-              <p class="student-no">{{ matched.studentNo }}</p>
-              <el-tag :type="matched.hasAccess ? 'success' : 'danger'" size="large">
-                {{ matched.hasAccess ? '允许通行' : '无权限' }}
+        <div class="log-section">
+          <h4>通行日志</h4>
+          <div class="log-list">
+            <div v-for="(item, index) in logs" :key="index" class="log-item">
+              <span class="time">{{ item.time }}</span>
+              <span class="name">{{ item.name }}</span>
+              <el-tag :type="item.hasAccess ? 'success' : 'danger'" size="small">
+                {{ item.hasAccess ? '通过' : '拒绝' }}
               </el-tag>
             </div>
-          </div>
-          <div class="log">
-            <h4>通行日志</h4>
-            <div class="log-list">
-              <div v-for="(item, index) in logs" :key="index" class="log-item">
-                <span class="time">{{ item.time }}</span>
-                <span class="name">{{ item.name }}</span>
-                <el-tag :type="item.hasAccess ? 'success' : 'danger'" size="small">
-                  {{ item.hasAccess ? '通过' : '拒绝' }}
-                </el-tag>
-              </div>
-            </div>
+            <div v-if="logs.length === 0" class="no-logs">暂无日志</div>
           </div>
         </div>
-      </div>
-    </el-card>
+      </el-card>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { User } from '@element-plus/icons-vue'
+import { User, Warning } from '@element-plus/icons-vue'
 import { recognizeFace } from '@/api/access'
 import { getLabList } from '@/api/lab'
 
@@ -114,7 +123,7 @@ function startDraw() {
 }
 
 async function recognize() {
-  if (!canvasRef.value || !video || video.readyState < 2) return
+  if (!canvasRef.value || !video || video.readyState < 2 || !selectedLabId.value) return
 
   const canvas = canvasRef.value
   const imageBase64 = canvas.toDataURL('image/jpeg').split(',')[1]
@@ -192,18 +201,31 @@ onUnmounted(() => {
 
 <style scoped>
 .recognize-view {
-  padding: 20px;
+  padding: 24px;
 }
 
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
 }
 
-.camera-container {
+.page-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.content {
   display: flex;
   gap: 20px;
+}
+
+.camera-card {
+  flex-shrink: 0;
+  border-radius: 12px;
 }
 
 .video-wrapper {
@@ -212,6 +234,7 @@ onUnmounted(() => {
   background: #000;
   border-radius: 8px;
   overflow: hidden;
+  position: relative;
 }
 
 .video-wrapper canvas {
@@ -220,13 +243,20 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-.result-panel {
-  flex: 1;
-  min-width: 300px;
+.no-lab {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
 }
 
-.result-panel h3 {
-  margin: 0 0 20px 0;
+.result-card {
+  flex: 1;
+  min-width: 300px;
+  border-radius: 12px;
 }
 
 .no-result {
@@ -247,7 +277,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 20px;
   padding: 20px;
-  background: #f5f5f5;
+  background: #f5f7fa;
   border-radius: 8px;
   margin-bottom: 20px;
 }
@@ -256,6 +286,7 @@ onUnmounted(() => {
   font-size: 20px;
   font-weight: bold;
   margin: 0 0 5px 0;
+  color: #1a1a2e;
 }
 
 .matched .info .student-no {
@@ -263,12 +294,19 @@ onUnmounted(() => {
   margin: 0 0 10px 0;
 }
 
-.log h4 {
+.log-section {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.log-section h4 {
   margin: 0 0 10px 0;
+  color: #333;
 }
 
 .log-list {
-  max-height: 300px;
+  max-height: 250px;
   overflow-y: auto;
 }
 
@@ -277,7 +315,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f5f5f5;
 }
 
 .log-item .time {
@@ -287,5 +325,12 @@ onUnmounted(() => {
 
 .log-item .name {
   flex: 1;
+  color: #333;
+}
+
+.no-logs {
+  text-align: center;
+  color: #999;
+  padding: 20px;
 }
 </style>

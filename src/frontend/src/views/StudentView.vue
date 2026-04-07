@@ -1,13 +1,11 @@
 <template>
   <div class="student-view">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>学生管理</span>
-          <el-button type="primary" @click="openAddDialog">注册学生</el-button>
-        </div>
-      </template>
+    <div class="page-header">
+      <h2>学生管理</h2>
+      <el-button type="primary" @click="openAddDialog">注册学生</el-button>
+    </div>
 
+    <el-card class="table-card">
       <el-table :data="students" border stripe>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="studentNo" label="学号" />
@@ -41,9 +39,6 @@
         </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" show-password />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status">
@@ -115,15 +110,13 @@ const form = reactive({
   id: null,
   studentNo: '',
   name: '',
-  password: '',
   status: 1,
   imageBase64: ''
 })
 
 const rules = {
   studentNo: [{ required: true, message: '请输入学号', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
 }
 
 async function fetchStudents() {
@@ -139,7 +132,7 @@ function openAddDialog() {
   isEdit.value = false
   imageMode.value = 'upload'
   stopCamera()
-  Object.assign(form, { id: null, studentNo: '', name: '', password: '', status: 1, imageBase64: '' })
+  Object.assign(form, { id: null, studentNo: '', name: '', status: 1, imageBase64: '' })
   showDialog.value = true
 }
 
@@ -147,7 +140,7 @@ function openEditDialog(row) {
   isEdit.value = true
   imageMode.value = 'upload'
   stopCamera()
-  Object.assign(form, { id: row.id, studentNo: row.studentNo, name: row.name, password: row.password, status: row.status, imageBase64: '' })
+  Object.assign(form, { id: row.id, studentNo: row.studentNo, name: row.name, status: row.status, imageBase64: '' })
   showDialog.value = true
 }
 
@@ -212,7 +205,6 @@ async function handleSubmit() {
         await updateStudent({
           id: form.id,
           name: form.name,
-          password: form.password,
           status: form.status
         })
         ElMessage.success('更新成功')
@@ -259,10 +251,23 @@ const cameraActive = ref(false)
   padding: 24px;
 }
 
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.table-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
 }
 
 .image-input-area {
