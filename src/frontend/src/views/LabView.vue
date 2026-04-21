@@ -6,7 +6,10 @@
     </div>
 
     <el-card class="table-card">
-      <el-table :data="labs" border stripe>
+      <div class="search-bar">
+        <el-input v-model="search" placeholder="搜索名称或位置" style="width: 200px" clearable @change="fetchLabs" />
+      </div>
+      <el-table :data="labs" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="名称" />
         <el-table-column prop="location" label="位置" />
@@ -26,6 +29,16 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="[2, 10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        @size-change="fetchLabs"
+        @current-change="fetchLabs"
+        style="margin-top: 20px"
+      />
     </el-card>
 
     <el-dialog v-model="showDialog" :title="isEdit ? '编辑实验室' : '添加实验室'" width="500px" destroy-on-close>
@@ -91,6 +104,10 @@ const showDialog = ref(false)
 const isEdit = ref(false)
 const loading = ref(false)
 const formRef = ref()
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const search = ref('')
 
 const showWhiteDialog = ref(false)
 const currentLab = ref(null)
@@ -111,10 +128,14 @@ const rules = {
 
 async function fetchLabs() {
   try {
-    const res = await getLabList()
-    labs.value = res.data || []
+    loading.value = true
+    const res = await getLabList({ page: page.value, pageSize: pageSize.value, search: search.value })
+    labs.value = res.data.list || []
+    total.value = res.data.total || 0
   } catch (e) {
     ElMessage.error('获取实验室列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -234,6 +255,10 @@ onMounted(() => {
 .table-card {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+.search-bar {
+  margin-bottom: 15px;
 }
 
 .white-dialog-content {

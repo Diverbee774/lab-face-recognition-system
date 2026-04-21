@@ -1,5 +1,7 @@
 package com.lab.face.service;
 
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.lab.face.entity.Lab;
 import com.lab.face.entity.Student;
 import com.lab.face.entity.StudentLab;
@@ -9,7 +11,9 @@ import com.lab.face.mapper.StudentMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class LabService {
@@ -54,6 +58,18 @@ public class LabService {
 
     public List<Lab> getAllLabs() {
         return labMapper.findAll();
+    }
+
+    public Map<String, Object> getLabs(int page, int pageSize, String search) {
+        PageHelper.startPage(page, pageSize);
+        List<Lab> list = labMapper.searchLabs(search);
+        PageInfo<Lab> pageInfo = new PageInfo<>(list);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", pageInfo.getList());
+        result.put("total", pageInfo.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
     }
 
     public Lab getLabById(Long id) {

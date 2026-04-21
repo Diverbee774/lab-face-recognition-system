@@ -19,7 +19,11 @@ public class AccessController {
         String imageBase64 = (String) params.get("imageBase64");
         Long labId = params.get("labId") != null ? ((Number) params.get("labId")).longValue() : null;
 
-        Map<String, Object> result = accessService.recognize(imageBase64, labId);
-        return Result.success(result);
+        try {
+            Map<String, Object> result = accessService.recognize(imageBase64, labId);
+            return Result.success(result);
+        } catch (RuntimeException e) {
+            return Result.error(400, e.getMessage());
+        }
     }
 }

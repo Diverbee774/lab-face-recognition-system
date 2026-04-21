@@ -4,11 +4,16 @@ import AdminLayout from '@/views/AdminLayout.vue'
 import StudentView from '@/views/StudentView.vue'
 import RecognizeView from '@/views/RecognizeView.vue'
 import LabView from '@/views/LabView.vue'
+import PublicRecognizeView from '@/views/PublicRecognizeView.vue'
 
 const routes = [
   {
     path: '/login',
     component: LoginView
+  },
+  {
+    path: '/',
+    component: PublicRecognizeView
   },
   {
     path: '/admin',
@@ -30,8 +35,8 @@ const routes = [
     ]
   },
   {
-    path: '/',
-    redirect: '/admin/student'
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 
@@ -41,7 +46,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  if (to.path === '/login') {
+  if (to.path === '/login' || to.path === '/') {
     next()
     return
   }

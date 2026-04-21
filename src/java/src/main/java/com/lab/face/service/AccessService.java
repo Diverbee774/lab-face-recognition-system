@@ -1,11 +1,14 @@
 package com.lab.face.service;
 
 import com.lab.face.entity.FaceEncoding;
+import com.lab.face.entity.Lab;
 import com.lab.face.entity.Student;
 import com.lab.face.entity.StudentLab;
+import com.lab.face.mapper.LabMapper;
 import com.lab.face.mapper.StudentLabMapper;
 import com.lab.face.mapper.StudentMapper;
 import com.lab.face.thrift.*;
+import com.lab.face.util.ImageUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,9 @@ public class AccessService {
     @Autowired
     private StudentLabMapper studentLabMapper;
 
+    @Autowired
+    private LabMapper labMapper;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final double THRESHOLD = 0;
@@ -37,15 +43,20 @@ public class AccessService {
         Map<String, Object> result = new HashMap<>();
 
         byte[] imageBytes = Base64.getDecoder().decode(imageBase64);
+        byte[] jpegBytes = ImageUtils.convertToJpeg(imageBytes);
 
         EncodeRequest request = new EncodeRequest();
-        request.setImage_data(imageBytes);
+        request.setImage_data(jpegBytes);
 
         EncodeResponse response;
         try {
             response = faceRecognitionClient.encode(request);
         } catch (TException e) {
             throw new RuntimeException("调用Python服务失败: " + e.getMessage());
+        }
+
+        if (response.getCode() != 200) {
+            throw new RuntimeException("Python服务处理失败: " + response.getMsg());
         }
 
         if (response.getFaces() == null || response.getFaces().isEmpty()) {
@@ -118,6 +129,20 @@ public class AccessService {
         if (labId == null) {
             return true;
         }
+
+        Lab lab = labMapper.findById(labId);
+        if (lab == null) {
+            return false;
+        }
+
+        if (lab.getAccessMode() == 2) {
+            return true;
+        }
+
+        if (lab.getAccessMode() == 3) {
+            return false;
+        }
+
         StudentLab sl = studentLabMapper.findByStudentIdAndLabId(studentId, labId);
         return sl != null;
     }

@@ -17,6 +17,14 @@ public interface StudentMapper {
     @Select("SELECT * FROM student")
     List<Student> findAll();
 
+    @Select("<script>" +
+            "SELECT * FROM student WHERE 1=1 " +
+            "<if test='search != null and search != \"\"'>" +
+            "AND (student_no LIKE CONCAT('%', #{search}, '%') OR name LIKE CONCAT('%', #{search}, '%')) " +
+            "</if>" +
+            "</script>")
+    List<Student> searchStudents(@Param("search") String search);
+
     @Insert("INSERT INTO student (student_no, name, encoding, image_url, status, has_face) " +
             "VALUES (#{studentNo}, #{name}, #{encoding}, #{imageUrl}, #{status}, #{hasFace})")
     @Options(useGeneratedKeys = true, keyProperty = "id")

@@ -6,7 +6,10 @@
     </div>
 
     <el-card class="table-card">
-      <el-table :data="students" border stripe>
+      <div class="search-bar">
+        <el-input v-model="search" placeholder="搜索学号或姓名" style="width: 200px" clearable @change="fetchStudents" />
+      </div>
+      <el-table :data="students" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="studentNo" label="学号" />
         <el-table-column prop="name" label="姓名" />
@@ -30,6 +33,16 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="[2, 10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        @size-change="fetchStudents"
+        @current-change="fetchStudents"
+        style="margin-top: 20px"
+      />
     </el-card>
 
     <el-dialog v-model="showDialog" :title="isEdit ? '编辑学生' : '注册学生'" width="600px" destroy-on-close>
@@ -100,6 +113,10 @@ const isEdit = ref(false)
 const loading = ref(false)
 const formRef = ref()
 const imageMode = ref('upload')
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const search = ref('')
 
 const registerVideoRef = ref(null)
 const registerCanvasRef = ref(null)
@@ -121,10 +138,14 @@ const rules = {
 
 async function fetchStudents() {
   try {
-    const res = await getStudentList()
-    students.value = res.data || []
+    loading.value = true
+    const res = await getStudentList({ page: page.value, pageSize: pageSize.value, search: search.value })
+    students.value = res.data.list || []
+    total.value = res.data.total || 0
   } catch (e) {
     ElMessage.error('获取学生列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -145,12 +166,15 @@ function openEditDialog(row) {
 }
 
 function handleImageChange(file) {
+  const rawFile = file.raw
+  if (!rawFile) return
+
   const reader = new FileReader()
   reader.onload = e => {
     const base64 = e.target.result
     form.imageBase64 = base64.includes(',') ? base64.split(',')[1] : base64
   }
-  reader.readAsDataURL(file.raw)
+  reader.readAsDataURL(rawFile)
 }
 
 async function startCamera() {
@@ -268,6 +292,10 @@ const cameraActive = ref(false)
 .table-card {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+.search-bar {
+  margin-bottom: 15px;
 }
 
 .image-input-area {

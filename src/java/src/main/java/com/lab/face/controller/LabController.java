@@ -38,8 +38,11 @@ public class LabController {
     }
 
     @GetMapping("/list")
-    public Result listLabs() {
-        return Result.success(labService.getAllLabs());
+    public Result listLabs(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String search) {
+        return Result.success(labService.getLabs(page, pageSize, search));
     }
 
     @GetMapping("/{id}")

@@ -15,13 +15,20 @@ public class StudentController {
 
     @PostMapping("/register")
     public Result register(@RequestBody Student student) {
-        studentService.register(student);
-        return Result.success();
+        try {
+            studentService.register(student);
+            return Result.success();
+        } catch (RuntimeException e) {
+            return Result.error(400, e.getMessage());
+        }
     }
 
     @GetMapping("/list")
-    public Result listStudents() {
-        return Result.success(studentService.getAllStudents());
+    public Result listStudents(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String search) {
+        return Result.success(studentService.getStudents(page, pageSize, search));
     }
 
     @GetMapping("/{id}")

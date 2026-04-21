@@ -8,10 +8,11 @@ export function registerStudent(data) {
     })
 }
 
-export function getStudentList() {
+export function getStudentList(params) {
     return request({
         url: '/student/list',
-        method: 'get'
+        method: 'get',
+        params
     })
 }
 

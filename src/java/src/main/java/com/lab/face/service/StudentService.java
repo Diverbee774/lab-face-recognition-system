@@ -6,6 +6,7 @@ import com.lab.face.thrift.EncodeRequest;
 import com.lab.face.thrift.EncodeResponse;
 import com.lab.face.thrift.FaceRecognitionClient;
 import com.lab.face.mapper.StudentMapper;
+import com.lab.face.util.ImageUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -13,8 +14,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.apache.thrift.TException;
+
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class StudentService {
@@ -39,15 +45,20 @@ public class StudentService {
         }
 
         byte[] imageBytes = Base64.getDecoder().decode(imageBase64);
+        byte[] jpegBytes = ImageUtils.convertToJpeg(imageBytes);
 
         EncodeRequest request = new EncodeRequest();
-        request.setImage_data(imageBytes);
+        request.setImage_data(jpegBytes);
 
         EncodeResponse response;
         try {
             response = faceRecognitionClient.encode(request);
         } catch (TException e) {
             throw new RuntimeException("调用Python服务失败: " + e.getMessage());
+        }
+
+        if (response.getCode() != 200) {
+            throw new RuntimeException("Python服务处理失败: " + response.getMsg());
         }
 
         if (response.getFaces() == null || response.getFaces().isEmpty()) {
@@ -73,6 +84,18 @@ public class StudentService {
 
     public List<Student> getAllStudents() {
         return studentMapper.findAll();
+    }
+
+    public Map<String, Object> getStudents(int page, int pageSize, String search) {
+        PageHelper.startPage(page, pageSize);
+        List<Student> list = studentMapper.searchStudents(search);
+        PageInfo<Student> pageInfo = new PageInfo<>(list);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", pageInfo.getList());
+        result.put("total", pageInfo.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
     }
 
     public Student getStudentById(Long id) {

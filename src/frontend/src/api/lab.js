@@ -1,9 +1,10 @@
 import request from './request'
 
-export function getLabList() {
+export function getLabList(params) {
     return request({
         url: '/lab/list',
-        method: 'get'
+        method: 'get',
+        params
     })
 }
 

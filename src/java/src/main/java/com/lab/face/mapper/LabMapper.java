@@ -14,6 +14,14 @@ public interface LabMapper {
     @Select("SELECT * FROM lab")
     List<Lab> findAll();
 
+    @Select("<script>" +
+            "SELECT * FROM lab WHERE 1=1 " +
+            "<if test='search != null and search != \"\"'>" +
+            "AND (name LIKE CONCAT('%', #{search}, '%') OR location LIKE CONCAT('%', #{search}, '%')) " +
+            "</if>" +
+            "</script>")
+    List<Lab> searchLabs(@Param("search") String search);
+
     @Insert("INSERT INTO lab (name, location, access_mode) VALUES (#{name}, #{location}, #{accessMode})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Lab lab);
