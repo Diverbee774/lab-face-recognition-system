@@ -35,9 +35,12 @@ public class AccessService {
     @Autowired
     private LabMapper labMapper;
 
+    @Autowired
+    private VectorService vectorService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final double THRESHOLD = 0;
+    private static final double THRESHOLD = 0.6;
 
     public Map<String, Object> recognize(String imageBase64, Long labId) {
         Map<String, Object> result = new HashMap<>();
@@ -68,28 +71,22 @@ public class AccessService {
         List<Double> currentEncoding = face.getEncoding();
         log.info("currentEncoding size={}, first={}", currentEncoding.size(), currentEncoding.get(0));
 
-        List<Student> students = studentMapper.findAll();
-        log.info("students count={}", students.size());
-
-        for (Student student : students) {
-            log.info("student {} encoding length={}", student.getStudentNo(), student.getEncoding() != null ? student.getEncoding().length() : "null");
+        List<Float> queryVector = new ArrayList<>();
+        for (Double d : currentEncoding) {
+            queryVector.add(d.floatValue());
         }
+
+        List<Map<String, Object>> searchResults = vectorService.searchSimilar(queryVector, 1);
+        log.info("Vector search results: {}", searchResults);
 
         double maxSimilarity = 0;
         Student matchedStudent = null;
 
-        for (Student student : students) {
-            if (student.getEncoding() == null || student.getEncoding().isEmpty()) {
-                continue;
-            }
-
-            List<Double> storedEncoding = parseEncoding(student.getEncoding());
-            double similarity = cosineSimilarity(currentEncoding, storedEncoding);
-
-            if (similarity > maxSimilarity) {
-                maxSimilarity = similarity;
-                matchedStudent = student;
-            }
+        if (!searchResults.isEmpty()) {
+            Map<String, Object> best = searchResults.get(0);
+            Long studentId = ((Number) best.get("id")).longValue();
+            maxSimilarity = ((Number) best.get("score")).doubleValue();
+            matchedStudent = studentMapper.findById(studentId);
         }
 
         if (matchedStudent == null || maxSimilarity < THRESHOLD) {

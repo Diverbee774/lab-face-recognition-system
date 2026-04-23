@@ -1,10 +1,12 @@
 package com.lab.face.service;
 
+import com.lab.face.entity.EncodingOutbox;
 import com.lab.face.entity.Student;
 import com.lab.face.thrift.FaceInfo;
 import com.lab.face.thrift.EncodeRequest;
 import com.lab.face.thrift.EncodeResponse;
 import com.lab.face.thrift.FaceRecognitionClient;
+import com.lab.face.mapper.EncodingOutboxMapper;
 import com.lab.face.mapper.StudentMapper;
 import com.lab.face.util.ImageUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,11 +24,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class StudentService {
 
     @Autowired
     private StudentMapper studentMapper;
+
+    @Autowired
+    private EncodingOutboxMapper encodingOutboxMapper;
 
     @Autowired
     private FaceRecognitionClient faceRecognitionClient;
@@ -38,6 +45,7 @@ public class StudentService {
         this.objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
     }
 
+    @Transactional
     public void register(Student student) {
         String imageBase64 = student.getImageBase64();
         if (imageBase64 == null || imageBase64.isEmpty()) {
@@ -80,6 +88,12 @@ public class StudentService {
         student.setImageBase64(null);
 
         studentMapper.insert(student);
+
+        EncodingOutbox outbox = new EncodingOutbox();
+        outbox.setStudentId(student.getId());
+        outbox.setOperation(EncodingOutbox.OPERATION_ADD);
+        outbox.setStatus(EncodingOutbox.STATUS_PENDING);
+        encodingOutboxMapper.insert(outbox);
     }
 
     public List<Student> getAllStudents() {
@@ -117,11 +131,19 @@ public class StudentService {
         studentMapper.update(student);
     }
 
+    @Transactional
     public void deleteStudent(Long id) {
         Student student = studentMapper.findById(id);
         if (student == null) {
             throw new RuntimeException("学生不存在");
         }
+
+        EncodingOutbox outbox = new EncodingOutbox();
+        outbox.setStudentId(id);
+        outbox.setOperation(EncodingOutbox.OPERATION_DELETE);
+        outbox.setStatus(EncodingOutbox.STATUS_PENDING);
+        encodingOutboxMapper.insert(outbox);
+
         studentMapper.deleteById(id);
     }
 }
